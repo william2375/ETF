@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投資複利與股息再投入計算機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto+Sans+TC', sans-serif;
+            background-color: #fffaf0;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid #fbd38d;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #dd6b20, #ed8936);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold gradient-text">投資複利與再投入模擬器</h1>
+            <p class="text-gray-600 mt-2">專注於長期價值，讓時間成為你的朋友</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- 輸入面板 -->
+            <div class="card p-6 rounded-2xl shadow-sm space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">目前總市值 (元)</label>
+                    <input type="number" id="principal" value="794909" class="w-full mt-1 p-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">每月定期定額 (元)</label>
+                    <input type="number" id="monthlyAdd" value="10000" class="w-full mt-1 p-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">預期年化報酬率 (%)</label>
+                    <input type="number" id="annualRate" value="8" step="0.1" class="w-full mt-1 p-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">預計投資年數</label>
+                    <input type="range" id="years" min="1" max="30" value="10" class="w-full mt-2 accent-orange-500">
+                    <div class="text-right text-orange-600 font-bold"><span id="yearsVal">10</span> 年</div>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-orange-50 rounded-xl">
+                    <span class="text-sm font-medium text-orange-800">股息再投入</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="reinvest" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 結果顯示與圖表 -->
+            <div class="md:col-span-2 card p-6 rounded-2xl shadow-sm flex flex-col">
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-orange-100 p-4 rounded-xl text-center">
+                        <p class="text-xs text-orange-600 font-medium">預估期末資產</p>
+                        <p id="finalTotal" class="text-xl font-bold text-orange-800">0</p>
+                    </div>
+                    <div class="bg-blue-100 p-4 rounded-xl text-center">
+                        <p class="text-xs text-blue-600 font-medium">總投入本金</p>
+                        <p id="totalInvested" class="text-xl font-bold text-blue-800">0</p>
+                    </div>
+                </div>
+                <div class="flex-grow">
+                    <canvas id="growthChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-8 p-4 bg-white/50 rounded-xl text-sm text-gray-500 leading-relaxed border border-orange-100">
+            <h3 class="font-bold text-orange-700 mb-1">💡 心理小筆記</h3>
+            <p>目前您的持股中，<strong>0050</strong> 提供穩健的市場平均回報，而 <strong>00981A</strong> 則是追求超額報酬的引擎。大跌時股價變低，這筆 10,000 元能買入更多的股數，透過圖表中的成長曲線可以發現，時間越長，複利帶來的斜率增長越明顯。</p>
+        </footer>
+    </div>
+
+    <script>
+        const principalInput = document.getElementById('principal');
+        const monthlyAddInput = document.getElementById('monthlyAdd');
+        const annualRateInput = document.getElementById('annualRate');
+        const yearsInput = document.getElementById('years');
+        const reinvestInput = document.getElementById('reinvest');
+        
+        const yearsVal = document.getElementById('yearsVal');
+        const finalTotalDisplay = document.getElementById('finalTotal');
+        const totalInvestedDisplay = document.getElementById('totalInvested');
+
+        let chart;
+
+        function updateCalculation() {
+            const P = parseFloat(principalInput.value) || 0;
+            const M = parseFloat(monthlyAddInput.value) || 0;
+            const r = (parseFloat(annualRateInput.value) || 0) / 100;
+            const n = parseInt(yearsInput.value);
+            const isReinvest = reinvestInput.checked;
+
+            yearsVal.innerText = n;
+
+            let labels = [];
+            let dataTotal = [];
+            let dataInvested = [];
+
+            let currentTotal = P;
+            let currentInvested = P;
+            const monthlyRate = r / 12;
+
+            labels.push('現在');
+            dataTotal.push(currentTotal);
+            dataInvested.push(currentInvested);
+
+            for (let month = 1; month <= n * 12; month++) {
+                // 計算複利 (含息)
+                currentTotal = currentTotal * (1 + monthlyRate) + M;
+                currentInvested += M;
+
+                if (month % 12 === 0) {
+                    labels.push(`第 ${month/12} 年`);
+                    dataTotal.push(Math.round(currentTotal));
+                    dataInvested.push(currentInvested);
+                }
+            }
+
+            finalTotalDisplay.innerText = `NT$ ${Math.round(currentTotal).toLocaleString()}`;
+            totalInvestedDisplay.innerText = `NT$ ${currentInvested.toLocaleString()}`;
+
+            updateChart(labels, dataTotal, dataInvested);
+        }
+
+        function updateChart(labels, dataTotal, dataInvested) {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '預估總市值 (含複利)',
+                            data: dataTotal,
+                            borderColor: '#ed8936',
+                            backgroundColor: 'rgba(237, 137, 54, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: '累計投入本金',
+                            data: dataInvested,
+                            borderColor: '#4299e1',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: (value) => value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        [principalInput, monthlyAddInput, annualRateInput, yearsInput, reinvestInput].forEach(el => {
+            el.addEventListener('input', updateCalculation);
+        });
+
+        window.onload = updateCalculation;
+    </script>
+</body>
+</html>
