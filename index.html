@@ -1,0 +1,301 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell 
+} from 'recharts';
+import { Calculator, TrendingUp, Wallet, Calendar, Percent, PieChart as PieIcon, Sparkles } from 'lucide-react';
+
+const App = () => {
+  // 狀態設定
+  const [initialAmount, setInitialAmount] = useState(1000000);
+  const [monthlyContribution, setMonthlyContribution] = useState(10000);
+  const [annualRate, setAnnualRate] = useState(8);
+  const [years, setYears] = useState(5);
+
+  // 奶茶色調配色方案
+  const THEME = {
+    bg: '#F5F2EE', // 淺奶茶色背景
+    card: '#FFFFFF',
+    primary: '#B8977E', // 濃奶茶棕
+    secondary: '#DBC9BC', // 淺摩卡
+    accent: '#8C7355', // 深可可
+    text: '#5D534A', // 咖啡灰黑
+    muted: '#A69B91', // 莫蘭迪棕
+  };
+
+  // 計算數據
+  const { chartData, pieData, summary } = useMemo(() => {
+    const data = [];
+    let currentBalance = initialAmount;
+    let totalContribution = initialAmount;
+    const monthlyRate = annualRate / 100 / 12;
+
+    data.push({
+      year: '第 0 年',
+      總金額: Math.round(currentBalance),
+      本金投入: Math.round(totalContribution),
+      收益: 0
+    });
+
+    for (let i = 1; i <= years; i++) {
+      for (let m = 1; m <= 12; m++) {
+        currentBalance = (currentBalance + monthlyContribution) * (1 + monthlyRate);
+        totalContribution += monthlyContribution;
+      }
+      data.push({
+        year: `第 ${i} 年`,
+        總金額: Math.round(currentBalance),
+        本金投入: Math.round(totalContribution),
+        收益: Math.round(currentBalance - totalContribution)
+      });
+    }
+
+    const finalAmount = data[data.length - 1].總金額;
+    const finalContribution = data[data.length - 1].本金投入;
+    const finalProfit = finalAmount - finalContribution;
+
+    const pieData = [
+      { name: '本金投入', value: finalContribution },
+      { name: '累積收益', value: finalProfit }
+    ];
+
+    return { 
+      chartData: data, 
+      pieData, 
+      summary: { finalAmount, finalContribution, finalProfit } 
+    };
+  }, [initialAmount, monthlyContribution, annualRate, years]);
+
+  const formatCurrency = (val) => new Intl.NumberFormat('zh-TW').format(val);
+  const PIE_COLORS = [THEME.secondary, THEME.primary];
+
+  return (
+    <div className={`min-h-screen bg-[#F5F2EE] p-6 md:p-12 font-sans text-[#5D534A]`}>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <header className="mb-10 flex flex-col items-center md:items-start">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-[#B8977E] p-2.5 rounded-2xl shadow-md">
+              <Calculator className="text-white" size={24} />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#5D534A]">
+              複利投資計算機
+            </h1>
+          </div>
+          <p className="text-[#A69B91] text-lg font-medium">規劃您的品味投資，靜待財富優雅成長。</p>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* 左側：參數設定面板 */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-white p-8 rounded-[2rem] shadow-[0_10px_30px_rgba(184,151,126,0.1)] border border-[#EBE3DB]">
+              <h2 className="text-lg font-bold mb-8 flex items-center gap-2 text-[#5D534A]">
+                <Sparkles size={18} className="text-[#B8977E]" />
+                投資參數
+              </h2>
+              
+              <div className="space-y-8">
+                {/* 初始本金 */}
+                <div>
+                  <label className="block text-xs font-bold text-[#A69B91] uppercase tracking-widest mb-3">
+                    初始本金 (TWD)
+                  </label>
+                  <div className="relative group">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B8977E] font-medium">$</span>
+                    <input
+                      type="number"
+                      value={initialAmount}
+                      onChange={(e) => setInitialAmount(Number(e.target.value))}
+                      className="w-full pl-9 pr-4 py-3.5 bg-[#F9F7F5] border border-[#EBE3DB] rounded-2xl focus:ring-4 focus:ring-[#B8977E]/10 focus:border-[#B8977E] outline-none transition-all font-medium text-[#5D534A]"
+                    />
+                  </div>
+                </div>
+
+                {/* 每月投入 */}
+                <div>
+                  <label className="block text-xs font-bold text-[#A69B91] uppercase tracking-widest mb-3">
+                    每月定期定額
+                  </label>
+                  <div className="relative group">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B8977E] font-medium">$</span>
+                    <input
+                      type="number"
+                      value={monthlyContribution}
+                      onChange={(e) => setMonthlyContribution(Number(e.target.value))}
+                      className="w-full pl-9 pr-4 py-3.5 bg-[#F9F7F5] border border-[#EBE3DB] rounded-2xl focus:ring-4 focus:ring-[#B8977E]/10 focus:border-[#B8977E] outline-none transition-all font-medium text-[#5D534A]"
+                    />
+                  </div>
+                </div>
+
+                {/* 年化報酬率 */}
+                <div>
+                  <label className="block text-xs font-bold text-[#A69B91] uppercase tracking-widest mb-3">
+                    預估年化報酬率 (%)
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={annualRate}
+                      onChange={(e) => setAnnualRate(Number(e.target.value))}
+                      className="w-full px-4 py-3.5 bg-[#F9F7F5] border border-[#EBE3DB] rounded-2xl focus:ring-4 focus:ring-[#B8977E]/10 focus:border-[#B8977E] outline-none transition-all font-medium text-[#5D534A]"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#B8977E] font-medium">%</span>
+                  </div>
+                </div>
+
+                {/* 投資年數 */}
+                <div>
+                  <div className="flex justify-between items-center mb-5">
+                    <label className="text-xs font-bold text-[#A69B91] uppercase tracking-widest">投資年限</label>
+                    <span className="bg-[#B8977E] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm">
+                      {years} 年
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="40"
+                    value={years}
+                    onChange={(e) => setYears(Number(e.target.value))}
+                    className="w-full h-1.5 bg-[#EBE3DB] rounded-lg appearance-none cursor-pointer accent-[#B8977E]"
+                  />
+                  <div className="flex justify-between text-[10px] font-bold text-[#A69B91] mt-3 uppercase tracking-tighter">
+                    <span>1 YEAR</span>
+                    <span>40 YEARS</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 右側：結果與圖表 */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* 數據摘要卡片 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-[#B8977E] p-7 rounded-[2rem] shadow-xl shadow-[#B8977E]/20 text-white">
+                <div className="flex items-center gap-2 opacity-80 mb-3">
+                  <Wallet size={16} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">預估總資產</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">NT$ {formatCurrency(summary.finalAmount)}</p>
+              </div>
+              <div className="bg-white p-7 rounded-[2rem] shadow-sm border border-[#EBE3DB]">
+                <div className="flex items-center gap-2 text-[#A69B91] mb-3">
+                  <div className="w-2 h-2 rounded-full bg-[#DBC9BC]"></div>
+                  <span className="text-[10px] font-black uppercase tracking-widest">總投入本金</span>
+                </div>
+                <p className="text-2xl font-bold text-[#5D534A] tracking-tight">NT$ {formatCurrency(summary.finalContribution)}</p>
+              </div>
+              <div className="bg-white p-7 rounded-[2rem] shadow-sm border border-[#EBE3DB]">
+                <div className="flex items-center gap-2 text-[#A69B91] mb-3">
+                  <div className="w-2 h-2 rounded-full bg-[#B8977E]"></div>
+                  <span className="text-[10px] font-black uppercase tracking-widest">累積總收益</span>
+                </div>
+                <p className="text-2xl font-bold text-[#5D534A] tracking-tight">NT$ {formatCurrency(summary.finalProfit)}</p>
+              </div>
+            </div>
+
+            {/* 圖表容器 */}
+            <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-sm border border-[#EBE3DB]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-4">
+                <h3 className="text-lg font-bold flex items-center gap-2 text-[#5D534A]">
+                  <TrendingUp size={20} className="text-[#B8977E]" />
+                  增長軌跡與分佈
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-12">
+                {/* 趨勢圖 */}
+                <div className="xl:col-span-7">
+                  <div className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#B8977E" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#B8977E" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0EAE4" />
+                        <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#A69B91', fontSize: 11}} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#A69B91', fontSize: 11}} tickFormatter={(v) => `${v/10000}萬`} />
+                        <Tooltip 
+                          contentStyle={{borderRadius: '1.5rem', border: '1px solid #EBE3DB', boxShadow: '0 10px 25px rgba(0,0,0,0.05)'}}
+                          formatter={(v) => [`NT$ ${formatCurrency(v)}`, '金額']}
+                        />
+                        <Area type="monotone" dataKey="總金額" stroke="#B8977E" strokeWidth={5} fill="url(#colorTotal)" animationDuration={1200} />
+                        <Area type="monotone" dataKey="本金投入" stroke="#DBC9BC" strokeWidth={2} strokeDasharray="6 4" fill="transparent" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* 比例圓餅圖 */}
+                <div className="xl:col-span-5 bg-[#F9F7F5] rounded-3xl p-8 flex flex-col items-center justify-center border border-[#F0EAE4]">
+                  <div className="h-[220px] w-full relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          innerRadius={70}
+                          outerRadius={95}
+                          paddingAngle={10}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(v) => `NT$ ${formatCurrency(v)}`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                      <p className="text-[10px] font-black text-[#A69B91] uppercase tracking-[0.2em]">收益率</p>
+                      <p className="text-2xl font-bold text-[#8C7355]">
+                        {((summary.finalProfit / summary.finalAmount) * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="w-full mt-8 space-y-4">
+                    <div className="flex justify-between items-center text-xs font-bold tracking-wider">
+                      <span className="flex items-center gap-2 text-[#A69B91]">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#DBC9BC]"></div> 本金投入
+                      </span>
+                      <span className="text-[#5D534A]">{formatCurrency(summary.finalContribution)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs font-bold tracking-wider">
+                      <span className="flex items-center gap-2 text-[#A69B91]">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#B8977E]"></div> 累積收益
+                      </span>
+                      <span className="text-[#5D534A]">{formatCurrency(summary.finalProfit)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* 底部優雅提示 */}
+            <div className="bg-white border border-[#EBE3DB] p-7 rounded-[2rem] flex items-start gap-4">
+              <div className="bg-[#F9F7F5] p-2 rounded-xl">
+                <PieIcon size={20} className="text-[#B8977E]" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-[#5D534A] font-bold text-sm">複利美學分析</h4>
+                <p className="text-[#A69B91] text-xs leading-relaxed">
+                  在未來的 {years} 年中，時間將成為您最可靠的夥伴。
+                  您的資產成長至 <span className="text-[#8C7355] font-bold">{formatCurrency(summary.finalAmount)}</span> 元，
+                  其中收益佔比高達 <span className="text-[#8C7355] font-bold">{((summary.finalProfit / summary.finalAmount) * 100).toFixed(1)}%</span>。
+                  複利不僅是財富的積累，更是耐心與紀律的溫暖回饋。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
