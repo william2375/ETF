@@ -1,34 +1,40 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Legend 
 } from 'recharts';
 import { Calculator, TrendingUp, Wallet, Calendar, Percent, PieChart as PieIcon, Sparkles } from 'lucide-react';
 
+/**
+ * @description 複利投資計算機 - 優雅奶茶棕風格
+ * 支援初始本金、定期定額以及年化報酬率之資產增長模擬，並提供佔比分析。
+ */
 const App = () => {
-  // 狀態設定
+  // --- 狀態設定 ---
   const [initialAmount, setInitialAmount] = useState(1000000);
   const [monthlyContribution, setMonthlyContribution] = useState(10000);
   const [annualRate, setAnnualRate] = useState(8);
   const [years, setYears] = useState(5);
 
-  // 奶茶色調配色方案
+  // --- 奶茶色調配色方案 ---
   const THEME = {
-    bg: '#F5F2EE', // 淺奶茶色背景
-    card: '#FFFFFF',
-    primary: '#B8977E', // 濃奶茶棕
-    secondary: '#DBC9BC', // 淺摩卡
-    accent: '#8C7355', // 深可可
-    text: '#5D534A', // 咖啡灰黑
-    muted: '#A69B91', // 莫蘭迪棕
+    bg: '#F5F2EE',      // 淺奶茶色背景
+    card: '#FFFFFF',    // 純白卡片
+    primary: '#B8977E', // 濃奶茶棕 (主色)
+    secondary: '#DBC9BC', // 淺摩卡 (次色)
+    accent: '#8C7355',  // 深可可 (強調色)
+    text: '#5D534A',    // 咖啡灰黑 (主要文字)
+    muted: '#A69B91',   // 莫蘭迪棕 (輔助文字)
+    grid: '#F0EAE4'     // 圖表網格線
   };
 
-  // 計算數據
+  // --- 邏輯計算 ---
   const { chartData, pieData, summary } = useMemo(() => {
     const data = [];
     let currentBalance = initialAmount;
     let totalContribution = initialAmount;
     const monthlyRate = annualRate / 100 / 12;
 
+    // 初始年度點
     data.push({
       year: '第 0 年',
       總金額: Math.round(currentBalance),
@@ -36,8 +42,10 @@ const App = () => {
       收益: 0
     });
 
+    // 逐年計算
     for (let i = 1; i <= years; i++) {
       for (let m = 1; m <= 12; m++) {
+        // 月複利公式
         currentBalance = (currentBalance + monthlyContribution) * (1 + monthlyRate);
         totalContribution += monthlyContribution;
       }
@@ -49,8 +57,9 @@ const App = () => {
       });
     }
 
-    const finalAmount = data[data.length - 1].總金額;
-    const finalContribution = data[data.length - 1].本金投入;
+    const lastPoint = data[data.length - 1];
+    const finalAmount = lastPoint.總金額;
+    const finalContribution = lastPoint.本金投入;
     const finalProfit = finalAmount - finalContribution;
 
     const pieData = [
@@ -65,13 +74,15 @@ const App = () => {
     };
   }, [initialAmount, monthlyContribution, annualRate, years]);
 
+  // --- 輔助函式 ---
   const formatCurrency = (val) => new Intl.NumberFormat('zh-TW').format(val);
   const PIE_COLORS = [THEME.secondary, THEME.primary];
 
   return (
-    <div className={`min-h-screen bg-[#F5F2EE] p-6 md:p-12 font-sans text-[#5D534A]`}>
+    <div className="min-h-screen bg-[#F5F2EE] p-6 md:p-12 font-sans text-[#5D534A]">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        
+        {/* 標題區域 */}
         <header className="mb-10 flex flex-col items-center md:items-start">
           <div className="flex items-center gap-3 mb-2">
             <div className="bg-[#B8977E] p-2.5 rounded-2xl shadow-md">
@@ -81,10 +92,11 @@ const App = () => {
               複利投資計算機
             </h1>
           </div>
-          <p className="text-[#A69B91] text-lg font-medium">規劃您的品味投資，靜待財富優雅成長。</p>
+          <p className="text-[#A69B91] text-lg font-medium">規劃您的投資，靜待財富成長。</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
           {/* 左側：參數設定面板 */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white p-8 rounded-[2rem] shadow-[0_10px_30px_rgba(184,151,126,0.1)] border border-[#EBE3DB]">
@@ -170,6 +182,7 @@ const App = () => {
 
           {/* 右側：結果與圖表 */}
           <div className="lg:col-span-8 space-y-6">
+            
             {/* 數據摘要卡片 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-[#B8977E] p-7 rounded-[2rem] shadow-xl shadow-[#B8977E]/20 text-white">
@@ -263,13 +276,13 @@ const App = () => {
                       <span className="flex items-center gap-2 text-[#A69B91]">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#DBC9BC]"></div> 本金投入
                       </span>
-                      <span className="text-[#5D534A]">{formatCurrency(summary.finalContribution)}</span>
+                      <span className="text-[#5D534A] font-bold">{formatCurrency(summary.finalContribution)}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs font-bold tracking-wider">
                       <span className="flex items-center gap-2 text-[#A69B91]">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#B8977E]"></div> 累積收益
                       </span>
-                      <span className="text-[#5D534A]">{formatCurrency(summary.finalProfit)}</span>
+                      <span className="text-[#5D534A] font-bold">{formatCurrency(summary.finalProfit)}</span>
                     </div>
                   </div>
                 </div>
@@ -282,10 +295,10 @@ const App = () => {
                 <PieIcon size={20} className="text-[#B8977E]" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-[#5D534A] font-bold text-sm">複利美學分析</h4>
+                <h4 className="text-[#5D534A] font-bold text-sm">複利分析</h4>
                 <p className="text-[#A69B91] text-xs leading-relaxed">
                   在未來的 {years} 年中，時間將成為您最可靠的夥伴。
-                  您的資產成長至 <span className="text-[#8C7355] font-bold">{formatCurrency(summary.finalAmount)}</span> 元，
+                  您的資產預計成長至 <span className="text-[#8C7355] font-bold">{formatCurrency(summary.finalAmount)}</span> 元，
                   其中收益佔比高達 <span className="text-[#8C7355] font-bold">{((summary.finalProfit / summary.finalAmount) * 100).toFixed(1)}%</span>。
                   複利不僅是財富的積累，更是耐心與紀律的溫暖回饋。
                 </p>
